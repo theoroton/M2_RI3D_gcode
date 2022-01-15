@@ -28,8 +28,8 @@ struct Point {
 
 
 /**
-* Fonction qui calcule deltaE
-* L : taille du segment
+* Fonction qui calcule deltaE pour un carré
+* L : taille du côté du carré
 */
 double compute_deltaE(double L)
 {
@@ -83,6 +83,7 @@ int main () {
     //Coordonnées de départ
     float X_start = 20.0;
     float Y_start = 20.0;
+    //Hauteur de départ
     float Z = tau;
 
     //Liste des points du carré
@@ -113,7 +114,7 @@ int main () {
     //Pour chaque couche
     for (int n=1; n <= nb_layers; n++) {
 
-        //Pour chaque point
+        //Pour chaque point du carré
         for (Point p : points) {       
             //Augmente E par deltaE
             E += deltaE;
