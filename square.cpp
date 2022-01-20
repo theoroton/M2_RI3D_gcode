@@ -48,7 +48,10 @@ double compute_deltaE(double L)
 * Fonction qui renvoie le gcode pour remettre la buse à l'origine
 */
 string origin() {
-    return  "G0 Z8.0\nG0 X-33 Y-10 Z0\n"; 
+    string origin = "G0 X-33 Y-10 Z20\n";
+    origin.append("G0 Z0\n");
+    
+    return  origin; 
 }
 
 

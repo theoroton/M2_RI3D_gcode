@@ -57,7 +57,10 @@ double compute_deltaE(Point p1, Point p2)
 * Fonction qui renvoie le gcode pour remettre la buse à l'origine
 */
 string origin() {
-    return  "G0 Z8.0\nG0 X-33 Y-10 Z0\n"; 
+    string origin = "G0 X-33 Y-10 Z20\n";
+    origin.append("G0 Z0\n");
+    
+    return  origin; 
 }
 
 
@@ -111,8 +114,8 @@ int main () {
     //Déplacement au premier point
     gcode_file << "G0 X" << current.x << " Y" << current.y << " Z" << Z << " F" << F_G0 << ";" << "\n"; 
 
-    //Pas de l'angle : tous les 10 degrés
-    float angle_step = 10;
+    //Pas de l'angle : tous les 5 degrés
+    float angle_step = 5;
 
     //Pour chaque couche
     for (int n=1; n <= nb_layers; n++) {
