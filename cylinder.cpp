@@ -2,6 +2,7 @@
 #include <fstream>
 #include <cmath>
 #include <vector>
+#include <sstream>
 
 using namespace std;
 
@@ -10,21 +11,29 @@ string file_name = "cylinder.gcode";
 
 //Paramètres
 //Diamètre de la buse
-double nw = 0.4;
+float nw = 0.4;
 //Epaisseur d'une couche
-double tau = 0.2;
+float tau = 0.2;
 //Diamètre du filament
-double d = 1.75;
+float d = 1.75;
 //Vitesse de déplacement G0
 int F_G0 = 3000;
 //Vitesse de déplacement G1
 int F_G1 = 1200;
+//X du centre
+float X_center = 100.0;
+//Y du centre
+float Y_center = 100.0;
 
 //Structure qui représente un point
 struct Point {
-    double x; //Coordonnée x du point
-    double y; //Coordonnée y du point
+    float x; //Coordonnée x du point
+    float y; //Coordonnée y du point
 };
+
+
+//Point qui sert de centre pour l'impression
+Point center;
 
 
 /**
@@ -32,21 +41,21 @@ struct Point {
 * p1 : premier point
 * p2 : deuxième point
 */
-double compute_deltaE(Point p1, Point p2)
+float compute_deltaE(Point p1, Point p2)
 {
     //Calcul dx
-    double dx = p2.x - p1.x;
+    float dx = p2.x - p1.x;
     //Calcul dy
-    double dy = p2.y - p1.y;
+    float dy = p2.y - p1.y;
 
     //Calcul L (distance euclidienne entre les 2 points)
-    double L = sqrt(dx*dx + dy*dy);
+    float L = sqrt(dx*dx + dy*dy);
 
     //Calcul VE
-    double VE = L * tau * nw;
+    float VE = L * tau * nw;
     
     //Calcul deltaE
-    double deltaE = VE / (M_PI * (d*d / 4));
+    float deltaE = VE / (M_PI * (d*d / 4));
 
     //Retourne deltaE
     return deltaE;
@@ -61,6 +70,44 @@ string origin() {
     origin.append("G0 Z0\n");
     
     return  origin; 
+}
+
+
+/**
+ * Fonction qui insert un zigzag pour purger le nozzle
+ */
+string zigzag() {
+    ostringstream zigzag;
+    Point deb, haut, bas;
+    deb.x = 10.0;
+    deb.y = 10.0;
+    float E = 0.0;
+    float deltaE;
+    zigzag << "G0 X" << deb.x << " Y" << deb.y << " Z" << tau << " F" << F_G0 << "\n\n";
+    //8 fois
+    for (int i=1; i <= 8; i++) {
+        haut.x = deb.x;         haut.y = deb.y + 10.0;
+        bas.x  = deb.x + 10.0;  bas.y  = deb.y;
+
+        //Calcul deltaE
+        deltaE = compute_deltaE(deb, haut) * 2;
+        //Augmente E par deltaE
+        E += deltaE;
+
+        zigzag << "G1 X" << haut.x << " Y" << haut.y << " E" << E << " F" << F_G1 << "\n";
+
+        //Calcul deltaE
+        deltaE = compute_deltaE(haut, bas) * 2;
+        //Augmente E par deltaE
+        E += deltaE;
+
+        zigzag << "G1 X" << bas.x << " Y" << bas.y << " E" << E << " F" << F_G1 << "\n";
+        deb.x = bas.x; 
+        deb.y = bas.y;
+    }
+    zigzag << "G92 E0.0\n";
+
+    return zigzag.str();
 }
 
 
@@ -85,54 +132,57 @@ int main () {
     }
     gcode_file << params.rdbuf();
 
+    //Ajout du zigzag
+    gcode_file << zigzag() << "\n";
+
 
     //Début du code pour générer un cylindre
 
+    //Centre du cercle du cylindre
+    center.x = 100.0;
+    center.y = 100.0;
     //Hauteur dy cylindre
-    double height = 10;
+    float height = 5;
     //Nombre de couches
     int nb_layers = height/tau;
     //Diamètre du cylindre
-    double D = 8;
+    float D = 20;
     //Rayon du cylindre
-    double r = D/2;
-    //Coordonnées du centre du cylindre
-    double X_center = 20.0;
-    double Y_center = 20.0;
+    float r = D/2;
     //Hauteur de départ
-    double Z = tau;
+    float Z = tau;
 
-    //Point courant et point suivant
+    //Point premier, courant et point suivant
     Point current, next;
     //Point courant = premier point du cercle
-    current.x = X_center + r;
-    current.y = Y_center;
+    current.x = center.x + r;
+    current.y = center.y;
 
     //Initialisation E
-    double E = 0;
+    float E = 0;
 
     //Déplacement au premier point
-    gcode_file << "G0 X" << current.x << " Y" << current.y << " Z" << Z << " F" << F_G0 << ";" << "\n"; 
+    gcode_file << "G0 X" << current.x << " Y" << current.y << " Z" << Z << " F" << F_G0 << "\n\n"; 
 
-    //Pas de l'angle : tous les 5 degrés
-    float angle_step = 5;
+    //Pas de l'angle
+    float angle_step = 360/(D*2);
 
     //Pour chaque couche
     for (int n=1; n <= nb_layers; n++) {
 
         //Pour chaque angle du cercle du cylindre
-        for (int angle = 0; angle < 360; angle += angle_step) {       
+        for (int angle = angle_step; angle <= 360; angle += angle_step) {       
             //Calcul du x du prochain point
-            float x = X_center + cos(angle * M_PI / 180) * r;
+            float x = center.x + cos(angle * M_PI / 180) * r;
             //Calcul du y du prochain point
-            float y = Y_center + sin(angle * M_PI / 180) * r;
+            float y = center.y + sin(angle * M_PI / 180) * r;
 
             //Prochain point
             next.x = x;
             next.y = y;
 
-            //Calcul deltaE
-            float deltaE = compute_deltaE(current, next);
+            //Calcul deltaE (* 1.4 pour le cylindre)
+            float deltaE = compute_deltaE(current, next) * 1.4;
             //Augmente E par deltaE
             E += deltaE;
 
