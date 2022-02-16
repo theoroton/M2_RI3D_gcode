@@ -11,24 +11,24 @@ string file_name = "square.gcode";
 
 //Paramètres
 //Diamètre de la buse
-float nw = 0.4;
+double nw = 0.4;
 //Epaisseur d'une couche
-float tau = 0.2;
+double tau = 0.2;
 //Diamètre du filament
-float d = 1.75;
+double d = 1.75;
 //Vitesse de déplacement G0
 int F_G0 = 3000;
 //Vitesse de déplacement G1
 int F_G1 = 1200;
 //X du centre
-float X_center = 100.0;
+double X_center = 100.0;
 //Y du centre
-float Y_center = 100.0;
+double Y_center = 100.0;
 
 //Structure qui représente un point
 struct Point {
-    float x; //Coordonnée x du point
-    float y; //Coordonnée y du point
+    double x; //Coordonnée x du point
+    double y; //Coordonnée y du point
 };
 
 
@@ -37,21 +37,21 @@ struct Point {
 * p1 : premier point d'un côté de l'hexagone
 * p2 : deuxième point d'un côté de l'hexagone
 */
-float compute_deltaE(Point p1, Point p2)
+double compute_deltaE(Point p1, Point p2)
 {
     //Calcul dx
-    float dx = p2.x - p1.x;
+    double dx = p2.x - p1.x;
     //Calcul dy
-    float dy = p2.y - p1.y;
+    double dy = p2.y - p1.y;
 
     //Calcul L (distance euclidienne entre les 2 points)
-    float L = sqrt(dx*dx + dy*dy);
+    double L = sqrt(dx*dx + dy*dy);
 
     //Calcul VE
-    float VE = L * tau * nw;
+    double VE = L * tau * nw;
     
     //Calcul deltaE
-    float deltaE = VE / (M_PI * (d*d / 4));
+    double deltaE = VE / (M_PI * (d*d / 4));
 
     //Retourne deltaE
     return deltaE;
@@ -77,8 +77,8 @@ string zigzag() {
     Point deb, haut, bas;
     deb.x = 10.0;
     deb.y = 10.0;
-    float E = 0.0;
-    float deltaE;
+    double E = 0.0;
+    double deltaE;
     zigzag << "G0 X" << deb.x << " Y" << deb.y << " Z" << tau << " F" << F_G0 << "\n\n";
     //8 fois
     for (int i=1; i <= 8; i++) {
@@ -137,13 +137,13 @@ int main () {
     //Nombre de couches
     int nb_layers = 25;
     //Largeur côté carré
-    float L = 20;
+    double L = 20;
     //Coordonnées de départ
     Point start;
-    start.x = X_center - L;
-    start.y = Y_center - L;
+    start.x = X_center - L/2;
+    start.y = Y_center - L/2;
     //Hauteur de départ
-    float Z = tau;
+    double Z = tau;
 
     //Liste des points du carré
     vector<Point> points;
@@ -164,9 +164,9 @@ int main () {
 
     
     //Calcul de deltaE (deltaE constant car on a un carré) (* 1.2 pour le carré)
-    float deltaE = compute_deltaE(p1, p2) * 1.2;  
+    double deltaE = compute_deltaE(p1, p2) * 1.2;  
     //Initialisation E
-    float E = 0;
+    double E = 0;
 
     //Déplacement au premier point
     gcode_file << "G0 X" << p1.x << " Y" << p1.y << " Z" << Z << " F" << F_G0 << ";" << "\n\n"; 
