@@ -7,7 +7,7 @@
 using namespace std;
 
 //Nom du fichier à généré
-string file_name = "square_zigzag.gcode";
+string file_name = "square_zigzag_infill.gcode";
 
 //Paramètres
 //Diamètre de la buse
@@ -30,10 +30,6 @@ struct Point {
     double x; //Coordonnée x du point
     double y; //Coordonnée y du point
 };
-
-
-//Point qui sert de centre pour l'impression
-Point center;
 
 
 /**
