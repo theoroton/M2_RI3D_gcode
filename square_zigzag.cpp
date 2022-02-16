@@ -2,6 +2,7 @@
 #include <fstream>
 #include <cmath>
 #include <vector>
+#include <sstream>
 
 using namespace std;
 
@@ -10,34 +11,51 @@ string file_name = "square_zigzag.gcode";
 
 //Paramètres
 //Diamètre de la buse
-float nw = 0.4;
+double nw = 0.4;
 //Epaisseur d'une couche
-float tau = 0.2;
+double tau = 0.2;
 //Diamètre du filament
-float d = 1.75;
+double d = 1.75;
 //Vitesse de déplacement G0
 int F_G0 = 3000;
 //Vitesse de déplacement G1
 int F_G1 = 1200;
+//X du centre
+double X_center = 100.0;
+//Y du centre
+double Y_center = 100.0;
 
 //Structure qui représente un point
 struct Point {
-    float x; //Coordonnée x du point
-    float y; //Coordonnée y du point
+    double x; //Coordonnée x du point
+    double y; //Coordonnée y du point
 };
 
 
+//Point qui sert de centre pour l'impression
+Point center;
+
+
 /**
-* Fonction qui calcule deltaE pour un carré
-* L : taille du côté du carré
+* Fonction qui calcule deltaE à partir de 2 points
+* p1 : premier point
+* p2 : deuxième point
 */
-double compute_deltaE(double L)
+double compute_deltaE(Point p1, Point p2)
 {
+    //Calcul dx
+    double dx = p2.x - p1.x;
+    //Calcul dy
+    double dy = p2.y - p1.y;
+
+    //Calcul L (distance euclidienne entre les 2 points)
+    double L = sqrt(dx*dx + dy*dy);
+
     //Calcul VE
     double VE = L * tau * nw;
     
     //Calcul deltaE
-    double deltaE = VE / (M_PI * (d*d / 4));//VE*4/(M_PI*d*d);//
+    double deltaE = VE / (M_PI * (d*d / 4));
 
     //Retourne deltaE
     return deltaE;
@@ -55,6 +73,44 @@ string origin() {
 }
 
 
+/**
+ * Fonction qui insert un zigzag pour purger le nozzle
+ */
+string zigzag() {
+    ostringstream zigzag;
+    Point deb, haut, bas;
+    deb.x = 10.0;
+    deb.y = 10.0;
+    double E = 0.0;
+    double deltaE;
+    zigzag << "G0 X" << deb.x << " Y" << deb.y << " Z" << tau << " F" << F_G0 << "\n\n";
+    //8 fois
+    for (int i=1; i <= 8; i++) {
+        haut.x = deb.x;         haut.y = deb.y + 10.0;
+        bas.x  = deb.x + 10.0;  bas.y  = deb.y;
+
+        //Calcul deltaE
+        deltaE = compute_deltaE(deb, haut) * 2;
+        //Augmente E par deltaE
+        E += deltaE;
+
+        zigzag << "G1 X" << haut.x << " Y" << haut.y << " E" << E << " F" << F_G1 << "\n";
+
+        //Calcul deltaE
+        deltaE = compute_deltaE(haut, bas) * 2;
+        //Augmente E par deltaE
+        E += deltaE;
+
+        zigzag << "G1 X" << bas.x << " Y" << bas.y << " E" << E << " F" << F_G1 << "\n";
+        deb.x = bas.x; 
+        deb.y = bas.y;
+    }
+    zigzag << "G92 E0.0\n";
+
+    return zigzag.str();
+}
+
+
 //Main
 int main () {
     //Fichier des paramètres
@@ -66,30 +122,32 @@ int main () {
     params.open("params.gcode", ios::in | ios::binary);
     if (!params) {
         cerr << "Impossible d'ouvrir le fichier params.gcode" << endl;
-        return 0;
-        //exit(-1);
+        exit(-1);
     }
 
     gcode_file.open(file_name.c_str(), ios::out | ios::binary);
     if (!gcode_file) {
         cerr << "Impossible d'ouvrir le fichier " << file_name << endl;
-        return 0;
-        //exit(-1);
+        exit(-1);
     }
     gcode_file << params.rdbuf();
+
+    //Ajout du zigzag
+    gcode_file << zigzag() << "\n";
 
 
     //Début du code pour générer un carré
 
     //Nombre de couches
-    int nb_layers = 25;
+    int nb_layers = 1;
     //Largeur côté carré
-    float L = 40;
+    double L = 40;
     //Coordonnées de départ
-    float X_start = 80.0;
-    float Y_start = 50.0;
+    Point start;
+    start.x = X_center - L/2;
+    start.y = Y_center - L/2;
     //Hauteur de départ
-    float Z = tau;
+    double Z = tau;
 
     //Liste des points du carré
     vector<Point> points;
@@ -97,42 +155,24 @@ int main () {
     Point p1, p2, p3, p4;
 
     //Calcul des points du carré
-    p1.x = X_start;     p1.y = Y_start;
-    p2.x = X_start + L; p2.y = Y_start;
-    p3.x = X_start + L; p3.y = Y_start + L;
-    p4.x = X_start;     p4.y = Y_start + L;
+    p1.x = start.x;     p1.y = start.y;
+    p2.x = start.x + L; p2.y = start.y;
+    p3.x = start.x + L; p3.y = start.y + L;
+    p4.x = start.x;     p4.y = start.y + L;
 
-    //Ajout des points à la liste des points
-    points.push_back(p1);
-    points.push_back(p4);
-    points.push_back(p3);
+    //Ajout des points à la liste des points (p1 à la fin pour retourner dessus)
     points.push_back(p2);
+    points.push_back(p3);
+    points.push_back(p4);
     points.push_back(p1);
-    //points.push_back(p1);
 
-    //Calcul de deltaE (deltaE constant car on a un carré)
-    float deltaE = compute_deltaE(L);
+    //Calcul de deltaE pour les côtés du carré
+    double deltaE = compute_deltaE(p1, p2);
     //Initialisation E
-    float E = 0;//0;
+    double E = 0;
 
     //Déplacement au premier point
-    int xC = 40;
-    int yC = 10;
-    gcode_file << "G0 X"<<xC<<" Y"<<yC<<" Z" << Z << " F" << F_G0 << ";" << "\n"; 
-    
-    for (int i = 1; i < 10; i++) {
-        if(i%2 != 0) {
-            yC += 10;
-        } else {
-            xC += 10;
-            yC -= 10;
-        }
-        E += deltaE;
-        gcode_file << "G1 X" << xC << " Y" << yC << " E" << E << " F" << F_G1 << "\n";
-    }
-    deltaE = 2*compute_deltaE(L);
-    E += deltaE;
-    gcode_file << "G1 X" << xC << " Y" << yC << " E" << E << " F" << F_G1 << "\n";
+    gcode_file << "G0 X" << p1.x << " Y" << p1.y << " Z" << Z << " F" << F_G0 << ";" << "\n\n"; 
     
     //Pour chaque point du carré
     for (int i = 0; i < points.size(); i++) {
@@ -141,50 +181,99 @@ int main () {
         E += deltaE;
         //Déplacement G1 à ce point
         gcode_file << "G1 X" << p.x << " Y" << p.y << " E" << E << " F" << F_G1 << "\n";
- 
     }
+
+     gcode_file << "\n";
 
     //-----------Zigzag-----------
 
-    //Calcul des points du carré
-    //p1.x = X_start;     p1.y = X_start;
-    p4.x =  X_start + L-tau;     p4.y = X_start + L+tau;
+    //Point de fin du zigzag
+    Point end;
+    end.x = start.x + L - tau; 
+    end.y = start.y + L - tau;
 
-    Point curr = {p1.x+2*tau, p1.y+2*tau};
-    //Déplacement au premier point interieur
-    gcode_file << "G0 X" << curr.x << " Y" << curr.y << " Z" << Z << " F" << F_G0 << ";" << "\n"; 
-    float L_interieur = L-3*tau;
+    //Point courant et point suivant
+    Point curr, next;
+    curr.x = p1.x + tau;
+    curr.y = p1.y + tau;
+
+    //Déplacement au premier point intérieur
+    gcode_file << "G0 X" << curr.x << " Y" << curr.y << " Z" << Z << " F" << F_G0 << "\n\n";
+
+    //Calcul de la largeur intérieur du zigzag
+    double L_interieur = L - 2 * tau;
+    //Compteur pour savoir dans quel sens aller
     int counter = 0;
-    //int iter_max = (L_interieur/tau)+1;
-    //E = 0;
-    //while(counter != iter_max){
         
-    while(curr.x < p4.x && curr.y < p4.y) {
-        //curr.x += tau;
-        /*if(counter == 0) {
-            curr.y = curr.y+L_interieur - 3*tau;
+    //Tant que le point de fin n'est pas atteint
+    while(curr.x <= end.x) {     
+        //Calcul du prochain point suivant pour le déplacement à gauche/à droite
+        next.x = curr.x;
+
+        //Calcul du prochain Y
+        //Si le compteur est pair
+        if (counter % 2 == 0) {
+            //On monte
+            next.y = curr.y + L_interieur;
+        //Si le compteur est impair
+        } else {
+            //On descend
+            next.y = curr.y - L_interieur;
         }
-        else {
-        */    curr.y = (counter%2 == 0) ? curr.y+L_interieur - tau : curr.y-L_interieur + tau;
-       //}
-        /*if(counter == 1) {
-            curr.y -=tau;
-        } */
+
+        //Calcul de deltaE
+        deltaE = compute_deltaE(curr, next);
         //Augmente E par deltaE
         E += deltaE;
-        //Déplacement G1 à ce point
-        gcode_file << "G1 X" << curr.x << " Y" << curr.y << " E" << E << " F" << F_G1 << "\n";
-        curr.x+=2*tau;
-        gcode_file << "G1 X" << curr.x << " Y" << curr.y << " E" << E << " F" << F_G1 << "\n";
-        /*if(curr.x != p4.x && curr.y != p4.y) {
-            curr.x += tau;
-            gcode_file << "G1 X" << curr.x << " Y" << curr.y << " E" << E << " F" << F_G1 << "\n";
-        }*/
+        //Déplacement au point prochain point courant
+        gcode_file << "G1 X" << next.x << " Y" << next.y << " E" << E << " F" << F_G1 << "\n";
+
+        //Le point point suivant devient le point courant
+        curr.x = next.x;
+        curr.y = next.y;
+
+        //Calcul du point suivant pour le déplacement en avant/en arrière
+        next.x = curr.x + 2 * tau;
+        next.y = curr.y;
+
+        //Calcul de deltaE
+        deltaE = compute_deltaE(curr, next);
+        //Augmente E par deltaE
+        E += deltaE;
+        //Déplacement en avant/en arrière
+        gcode_file << "G1 X" << next.x << " Y" << next.y << " E" << E << " F" << F_G1 << "\n";
+
+        //Le point point suivant devient le point courant
+        curr.x = next.x;
+        curr.y = next.y;
+
+        //Augmente le compteur de 1
         counter++;
     }
 
+    //Calcul du dernier point suivant pour le déplacement à gauche/à droite
+    next.x = curr.x;
+
+    //Calcul du prochain Y
+    //Si le compteur est pair
+    if (counter % 2 == 0) {
+        //On monte
+        next.y = curr.y + L_interieur;
+    //Si le compteur est impair
+    } else {
+        //On descend
+        next.y = curr.y - L_interieur;
+    }
+
+    //Calcul de deltaE
+    deltaE = compute_deltaE(curr, next);
+    //Augmente E par deltaE
+    E += deltaE;
+    //Dernier déplacement
+    gcode_file << "G1 X" << next.x << " Y" << next.y << " E" << E << " F" << F_G1 << "\n";
+
     //Remet la buse à l'origine
-    gcode_file << origin() << "\n";
+    gcode_file << "\n" << origin() << "\n";
  
     //Ferme les fichiers
     params.close();
