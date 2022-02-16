@@ -134,8 +134,10 @@ int main () {
 
     //Début du code pour générer un carré
 
+    //Hauteur du cube
+    double height = 5;
     //Nombre de couches
-    int nb_layers = 25;
+    int nb_layers = height/tau;
     //Largeur côté carré
     double L = 40;
     //Coordonnées de départ

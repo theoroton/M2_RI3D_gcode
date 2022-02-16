@@ -141,7 +141,7 @@ int main () {
     //Centre du cercle du cylindre
     center.x = 100.0;
     center.y = 100.0;
-    //Hauteur dy cylindre
+    //Hauteur du cylindre
     double height = 5;
     //Nombre de couches
     int nb_layers = height/tau;
