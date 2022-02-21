@@ -67,14 +67,12 @@ int main () {
     if (!params) {
         cerr << "Impossible d'ouvrir le fichier params.gcode" << endl;
         return 0;
-        //exit(-1);
     }
 
     gcode_file.open(file_name.c_str(), ios::out | ios::binary);
     if (!gcode_file) {
         cerr << "Impossible d'ouvrir le fichier " << file_name << endl;
         return 0;
-        //exit(-1);
     }
     gcode_file << params.rdbuf();
 
@@ -111,9 +109,14 @@ int main () {
     //points.push_back(p1);
 
     //Calcul de deltaE (deltaE constant car on a un carré)
-    float deltaE = compute_deltaE(L);
+    float deltaE = 1.8*compute_deltaE(L);
+    float deltaEL = 1.8*compute_deltaE(2*tau);
+    float deltaEH = 1.8*compute_deltaE(L-2*tau);
+    //float deltaEstart = compute_deltaE(L);
+    //float deltaEH = compute_deltaE(L);
+    //float deltaEL = compute_deltaE(L);
     //Initialisation E
-    float E = 0;//0;
+    float E = 0;
 
     //Déplacement au premier point
     int xC = 40;
@@ -130,57 +133,54 @@ int main () {
         E += deltaE;
         gcode_file << "G1 X" << xC << " Y" << yC << " E" << E << " F" << F_G1 << "\n";
     }
-    deltaE = 2*compute_deltaE(L);
-    E += deltaE;
-    gcode_file << "G1 X" << xC << " Y" << yC << " E" << E << " F" << F_G1 << "\n";
+    //deltaE = 1.8*compute_deltaE(L);
+    //E += deltaE;
+    //gcode_file << "G1 X" << xC << " Y" << yC << " E" << E << " F" << F_G1 << "\n";
     
-    //Pour chaque point du carré
-    for (int i = 0; i < points.size(); i++) {
-        Point p = points[i];       
-        //Augmente E par deltaE
-        E += deltaE;
-        //Déplacement G1 à ce point
-        gcode_file << "G1 X" << p.x << " Y" << p.y << " E" << E << " F" << F_G1 << "\n";
- 
-    }
-
-    //-----------Zigzag-----------
-
-    //Calcul des points du carré
-    //p1.x = X_start;     p1.y = X_start;
-    p4.x =  X_start + L-tau;     p4.y = X_start + L+tau;
-
-    Point curr = {p1.x+2*tau, p1.y+2*tau};
-    //Déplacement au premier point interieur
-    gcode_file << "G0 X" << curr.x << " Y" << curr.y << " Z" << Z << " F" << F_G0 << ";" << "\n"; 
-    float L_interieur = L-3*tau;
-    int counter = 0;
-    //int iter_max = (L_interieur/tau)+1;
-    //E = 0;
-    //while(counter != iter_max){
-        
-    while(curr.x < p4.x && curr.y < p4.y) {
-        //curr.x += tau;
-        /*if(counter == 0) {
-            curr.y = curr.y+L_interieur - 3*tau;
+    int count_glob = 0;
+    while(count_glob < 10) {
+        if(count_glob != 0){
+            gcode_file << "G0 X"<<p1.x<<" Y"<<p1.y<<" Z" << Z << " F" << F_G0 << ";" << "\n";
+            Z-=tau;
         }
-        else {
-        */    curr.y = (counter%2 == 0) ? curr.y+L_interieur - tau : curr.y-L_interieur + tau;
-       //}
-        /*if(counter == 1) {
-            curr.y -=tau;
-        } */
-        //Augmente E par deltaE
-        E += deltaE;
-        //Déplacement G1 à ce point
-        gcode_file << "G1 X" << curr.x << " Y" << curr.y << " E" << E << " F" << F_G1 << "\n";
-        curr.x+=2*tau;
-        gcode_file << "G1 X" << curr.x << " Y" << curr.y << " E" << E << " F" << F_G1 << "\n";
-        /*if(curr.x != p4.x && curr.y != p4.y) {
-            curr.x += tau;
+        //Pour chaque point du carré
+        for (int i = 0; i < points.size(); i++) {
+            Point p = points[i];       
+            //Augmente E par deltaE
+            E += deltaE;
+            //Déplacement G1 à ce point
+            gcode_file << "G1 X" << p.x << " Y" << p.y << " E" << E << " F" << F_G1 << "\n";
+    
+        }
+
+        //-----------Zigzag-----------
+
+        //Calcul des points du carré
+        p4.x =  X_start + L;     p4.y = Y_start + L;
+
+        Point curr = {p1.x+tau, p1.y+tau};
+        //Déplacement au premier point interieur
+        gcode_file << "G0 X" << curr.x << " Y" << curr.y << " Z" << Z << " F" << F_G0 << ";" << "\n"; 
+        float L_interieur = L-2*tau;
+        int counter = 0;
+
+        while(curr.x < p4.x && curr.y < p4.y) {
+            curr.y = (counter%2 == 0) ? curr.y+L_interieur : curr.y-L_interieur;
+
+            //Augmente E par deltaE
+            E += deltaEH;
+            //Déplacement G1 à ce point
             gcode_file << "G1 X" << curr.x << " Y" << curr.y << " E" << E << " F" << F_G1 << "\n";
-        }*/
-        counter++;
+            
+            curr.x+=2*tau;
+            if(curr.x < p4.x && curr.y < p4.y){
+                E += deltaEL;
+                gcode_file << "G1 X" << curr.x << " Y" << curr.y << " E" << E << " F" << F_G1 << "\n";
+            }
+            counter++;
+        }
+        Z+=2*tau;
+        count_glob++;
     }
 
     //Remet la buse à l'origine
