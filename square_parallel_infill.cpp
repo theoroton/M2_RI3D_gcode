@@ -7,7 +7,7 @@
 using namespace std;
 
 //Nom du fichier à généré
-string file_name = "hexagon.gcode";
+string file_name = "square_parallel_infill.gcode";
 
 //Paramètres
 //Diamètre de la buse
@@ -33,9 +33,9 @@ struct Point {
 
 
 /**
-* Fonction qui calcule deltaE pour un hexagone à partir des 2 points d'un de ces côtés
-* p1 : premier point d'un côté de l'hexagone
-* p2 : deuxième point d'un côté de l'hexagone
+* Fonction qui calcule deltaE à partir de 2 points
+* p1 : premier point
+* p2 : deuxième point
 */
 double compute_deltaE(Point p1, Point p2)
 {
@@ -62,11 +62,9 @@ double compute_deltaE(Point p1, Point p2)
 * Fonction qui renvoie le gcode pour remettre la buse à l'origine
 */
 string origin() {
-    //Gcode pour retourner à l'origine
     string origin = "G0 X-33 Y-10 Z20\n";
     origin.append("G0 Z0\n");
-
-    //Retourne le retour à l'origine
+    
     return  origin; 
 }
 
@@ -123,7 +121,7 @@ int main () {
         exit(-1);
     }
 
-    gcode_file.open(file_name, ios::out | ios::binary);
+    gcode_file.open(file_name.c_str(), ios::out | ios::binary);
     if (!gcode_file) {
         cerr << "Impossible d'ouvrir le fichier " << file_name << endl;
         exit(-1);
@@ -134,67 +132,106 @@ int main () {
     gcode_file << zigzag() << "\n";
 
 
-    //Début du code pour générer un hexagone
+    //Début du code pour générer un carré
 
-    //Hauteur de l'hexagone
-    double height = 15;
+    //Hauteur du cube
+    double height = 5;
     //Nombre de couches
     int nb_layers = height/tau;
-    //Rayon du cercle circonscrit R
-    double R = 10;
+    //Largeur côté carré
+    double L = 40;
+    //Coordonnées de départ
+    Point start;
+    start.x = X_center - L/2;
+    start.y = Y_center - L/2;
     //Hauteur de départ
-    double Z = tau;  
-    //Point qui sert de centre pour l'impression
-    Point center;
+    double Z = tau;
 
-    //Calcul du rayon du cercle inscrit r
-    double r = cos(30 * M_PI / 180) * R;
-    //Calcul de la hauteur entre le centre et un point de l'hexagone n'étant pas sur la même abscisse
-    double h = sin(30 * M_PI / 180) * R;
-
-    //Liste des points de l'hexagone
+    //Liste des points du carré
     vector<Point> points;
-    //Création des points de l'hexagone
-    Point p1, p2, p3, p4, p5, p6;
+    //Création des points du carré
+    Point p1, p2, p3, p4;
 
-    //Calcul des points de l'hexagone
-    p1.x = X_center;        p1.y = Y_center + R;
-    p2.x = X_center + r;    p2.y = Y_center + h;
-    p3.x = X_center + r;    p3.y = Y_center - h;
-    p4.x = X_center;        p4.y = Y_center - R;
-    p5.x = X_center - r;    p5.y = Y_center - h;
-    p6.x = X_center - r;    p6.y = Y_center + h;
+    //Calcul des points du carré
+    p1.x = start.x;     p1.y = start.y;
+    p2.x = start.x + L; p2.y = start.y;
+    p3.x = start.x + L; p3.y = start.y + L;
+    p4.x = start.x;     p4.y = start.y + L;
 
     //Ajout des points à la liste des points (p1 à la fin pour retourner dessus)
     points.push_back(p2);
     points.push_back(p3);
     points.push_back(p4);
-    points.push_back(p5);
-    points.push_back(p6);
     points.push_back(p1);
-
-    //Calcul de deltaE (deltaE constant car tous les côtés sont de même longueur dans un hexagone) (* 1.2 pour l'hexagone)
-    double deltaE = compute_deltaE(p1, p2) * 1.2;
-    //Initialisation E
-    double E = 0;
-
-    //Déplacement au premier point
-    gcode_file << "G0 X" << p1.x << " Y" << p1.y << " Z" << Z << " F" << F_G0 << ";" << "\n\n"; 
+  
+    //Initialisation deltaE et E
+    double deltaE, E = 0;
 
     //Pour chaque couche
     for (int n=1; n <= nb_layers; n++) {
 
-        //Pour chaque point de l'hexagone
-        for (Point p : points) {       
+        //Calcul de deltaE pour les côtés du carré
+        deltaE = compute_deltaE(p1, p2);
+
+        //Déplacement au premier point
+        gcode_file << "G0 X" << p1.x << " Y" << p1.y << " Z" << Z << " F" << F_G0 << ";" << "\n\n"; 
+        
+        //Pour chaque point du carré
+        for (int i = 0; i < points.size(); i++) {
+            Point p_ext = points[i];       
             //Augmente E par deltaE
             E += deltaE;
             //Déplacement G1 à ce point
-            gcode_file << "G1 X" << p.x << " Y" << p.y << " E" << E << " F" << F_G1 << "\n";
+            gcode_file << "G1 X" << p_ext.x << " Y" << p_ext.y << " E" << E << " F" << F_G1 << "\n";
+        }
+
+        //Création des points du carré intérieur
+        Point p1_i, p2_i, p3_i, p4_i;
+        //Calcul des points du carré intérieur (au début, même que le carré normal)
+        p1_i.x = p1.x;      p1_i.y = p1.y;
+        p2_i.x = p2.x;      p2_i.y = p2.y;
+        p3_i.x = p3.x;      p3_i.y = p3.y;
+        p4_i.x = p4.x;      p4_i.y = p4.y;
+
+        //-----------Parallel-----------
+
+        //Tant que ne converge pas vers le centre
+        while (p2_i.x - p1_i.x > tau) {
+
+            //Liste des points du carré intérieur
+            vector<Point> points_interieur;
+
+            //Calcul des points du carré intérieur
+            p1_i.x = p1_i.x + tau;      p1_i.y = p1_i.y + tau;
+            p2_i.x = p2_i.x - tau;      p2_i.y = p2_i.y + tau;
+            p3_i.x = p3_i.x - tau;      p3_i.y = p3_i.y - tau;
+            p4_i.x = p4_i.x + tau;      p4_i.y = p4_i.y - tau;
+
+            //Ajout des points à la liste des points (p1 à la fin pour retourner dessus)
+            points_interieur.push_back(p2_i);
+            points_interieur.push_back(p3_i);
+            points_interieur.push_back(p4_i);
+            points_interieur.push_back(p1_i);
+
+            //Déplacement au premier point intérieur
+            gcode_file << "G0 X" << p1_i.x << " Y" << p1_i.y << " Z" << Z << " F" << F_G0 << "\n";
+                
+            //Calcul de deltaE pour les côtés du carré intérieur
+            deltaE = compute_deltaE(p1_i, p2_i);
+            
+            //Pour chaque point du carré intérieur
+            for (int i = 0; i < points_interieur.size(); i++) {
+                Point p_int = points_interieur[i];       
+                //Augmente E par deltaE
+                E += deltaE;
+                //Déplacement G1 à ce point
+                gcode_file << "G1 X" << p_int.x << " Y" << p_int.y << " E" << E << " F" << F_G1 << "\n";
+            }
         }
 
         //Passage à la couche suivante
         Z += tau;
-        gcode_file << "G0 Z" << Z << "\n\n";        
+        gcode_file << "G0 Z" << Z << "\n\n";   
     }
 
     //Remet la buse à l'origine
