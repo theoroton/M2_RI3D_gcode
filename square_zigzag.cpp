@@ -138,7 +138,7 @@ int main () {
     //gcode_file << "G1 X" << xC << " Y" << yC << " E" << E << " F" << F_G1 << "\n";
     
     int count_glob = 0;
-    while(count_glob < 10) {
+    while(count_glob < 50) {
         if(count_glob != 0){
             gcode_file << "G0 X"<<p1.x<<" Y"<<p1.y<<" Z" << Z << " F" << F_G0 << ";" << "\n";
             Z-=tau;
@@ -181,6 +181,7 @@ int main () {
         }
         Z+=2*tau;
         count_glob++;
+        E -= deltaE;
     }
 
     //Remet la buse à l'origine
