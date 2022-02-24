@@ -33,7 +33,7 @@ struct Point {
 
 
 /**
-* Fonction qui calcule deltaE pour un hexagone à partir des 2 points d'un de ces côtés
+* Fonction qui calcule deltaE pour un hexagone à partir des 2 points d'un de ses côtés
 * p1 : premier point d'un côté de l'hexagone
 * p2 : deuxième point d'un côté de l'hexagone
 */
@@ -120,13 +120,13 @@ int main () {
     params.open("params.gcode", ios::in | ios::binary);
     if (!params) {
         cerr << "Impossible d'ouvrir le fichier params.gcode" << endl;
-        exit(-1);
+        return -1;
     }
 
-    gcode_file.open(file_name, ios::out | ios::binary);
+    gcode_file.open(file_name.c_str(), ios::out | ios::binary);
     if (!gcode_file) {
         cerr << "Impossible d'ouvrir le fichier " << file_name << endl;
-        exit(-1);
+        return -1;
     }
     gcode_file << params.rdbuf();
 
@@ -185,7 +185,8 @@ int main () {
     for (int n=1; n <= nb_layers; n++) {
 
         //Pour chaque point de l'hexagone
-        for (Point p : points) {       
+        for (int i = 0; i < points.size(); i++) {
+            Point p = points[i];         
             //Augmente E par deltaE
             E += deltaE;
             //Déplacement G1 à ce point
