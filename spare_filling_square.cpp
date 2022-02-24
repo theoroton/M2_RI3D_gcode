@@ -62,7 +62,7 @@ double compute_deltaE(Point p1, Point p2)
     double deltaE = VE / (M_PI * (d*d / 4));
 
     //Retourne deltaE
-    return deltaE*2.5;
+    return deltaE;
 }
 
 
@@ -94,14 +94,14 @@ string zigzag() {
         bas.x  = deb.x + 10.0;  bas.y  = deb.y;
 
         //Calcul deltaE
-        deltaE = compute_deltaE(deb, haut);
+        deltaE = compute_deltaE(deb, haut) * 2;
         //Augmente E par deltaE
         E += deltaE;
 
         zigzag << "G1 X" << haut.x << " Y" << haut.y << " E" << E << " F" << F_G1 << "\n";
 
         //Calcul deltaE
-        deltaE = compute_deltaE(haut, bas);
+        deltaE = compute_deltaE(haut, bas) * 2;
         //Augmente E par deltaE
         E += deltaE;
 
@@ -273,13 +273,13 @@ int main () {
     params.open("params.gcode", ios::in | ios::binary);
     if (!params) {
         cerr << "Impossible d'ouvrir le fichier params.gcode" << endl;
-        return 0;
+        exit(-1);
     }
 
-    gcode_file.open(file_name.c_str(), ios::out | ios::binary);
+    gcode_file.open(file_name, ios::out | ios::binary);
     if (!gcode_file) {
         cerr << "Impossible d'ouvrir le fichier " << file_name << endl;
-        return 0;
+        exit(-1);
     }
     gcode_file << params.rdbuf();
 
