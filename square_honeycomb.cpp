@@ -81,7 +81,7 @@ string origin() {
 }
 
 //Dessine un hexagone centré en X_center, Y_center
-string draw_hexagone(int X_center, int Y_center, double E, float Z){
+string draw_hexagone(int X_center, int Y_center, float Z){
     std::stringstream ss;
 
     //Radius hexagone
@@ -106,14 +106,17 @@ string draw_hexagone(int X_center, int Y_center, double E, float Z){
     p6.x = X_center - r;    p6.y = Y_center + h;
 
     //Ajout des points à la liste des points (p1 à la fin pour retourner dessus)
+    points.push_back(p1);
     points.push_back(p2);
     points.push_back(p3);
     points.push_back(p4);
     points.push_back(p5);
     points.push_back(p6);
     points.push_back(p1);
+    points.push_back(p2);
 
     double deltaE = compute_deltaE_hexa(p1, p2) * 1.2;
+    double E = 0;
 
     //Déplacement au premier point
     ss << "G0 X" << p1.x << " Y" << p1.y << " Z" << Z << " F" << F_G0 << ";" << "\n"; 
@@ -130,17 +133,17 @@ string draw_hexagone(int X_center, int Y_center, double E, float Z){
     return ss.str();
 }
 
-string draw_line_hexagone(int X_center, int Y_center, double E, float L, float Z){
+string draw_line_hexagone(int X_center, int Y_center,float L, float Z){
     int R = 3;
     int x = X_center;
     int y = Y_center;
 
-    string code = draw_hexagone(x, y, E, Z);
+    string code = draw_hexagone(x, y, Z);
 
     for(int i=0; i<L/(R*2)+1; i++){                                       //Lignes
         for(int j=0; j<L/(R*2); j++){                                    //Colonnes
             x = X_center + j*R*2;
-            code = code + draw_hexagone(x, y, E, Z);
+            code = code + draw_hexagone(x, y, Z);
         }
         x = X_center;
         y = Y_center + i*R*2;
@@ -250,36 +253,8 @@ int main () {
         int x_centre = X_start + 3;
         int y_centre = Y_start + 3;
         gcode_file << "G0 X" << x_centre << " Y" << y_centre << " Z" << Z << " F" << F_G0 << ";" << "\n";
-        string code = draw_line_hexagone(x_centre, y_centre, E, L, Z);
+        string code = draw_line_hexagone(x_centre, y_centre, L, Z);
         gcode_file << code;
-
-
-        //-----------Honeycomb-----------
-
-        //Calcul des points du carré
-        //p4.x =  X_start + L;     p4.y = Y_start + L;
-
-        //Point curr = {p1.x+tau, p1.y+tau};
-        //Déplacement au premier point interieur
-        //gcode_file << "G0 X" << curr.x << " Y" << curr.y << " Z" << Z << " F" << F_G0 << ";" << "\n"; 
-        //float L_interieur = L-2*tau;
-        //int counter = 0;
-
-        /*while(curr.x < p4.x && curr.y < p4.y) {
-            curr.y = (counter%2 == 0) ? curr.y+L_interieur : curr.y-L_interieur;
-
-            //Augmente E par deltaE
-            E += deltaEH;
-            //Déplacement G1 à ce point
-            //gcode_file << "G1 X" << curr.x << " Y" << curr.y << " E" << E << " F" << F_G1 << "\n";
-            
-            curr.x+=2*tau;
-            if(curr.x < p4.x && curr.y < p4.y){
-                E += deltaEL;
-                //gcode_file << "G1 X" << curr.x << " Y" << curr.y << " E" << E << " F" << F_G1 << "\n";
-            }
-            counter++;
-        }*/
         Z+=2*tau;
         count++;
         E -= deltaE; 
