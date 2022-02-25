@@ -1,7 +1,13 @@
 #include <iostream>
 #include <fstream>
+#include <cstdio>
+#include <cstdlib>
+#include <limits>
 #include <cmath>
+#include <cassert>
+#include <map>
 #include <vector>
+#include <algorithm>
 #include <sstream>
 
 using namespace std;
@@ -56,7 +62,7 @@ double compute_deltaE(Point p1, Point p2)
     double deltaE = VE / (M_PI * (d*d / 4));
 
     //Retourne deltaE
-    return deltaE*2.5;
+    return deltaE;
 }
 
 
@@ -88,14 +94,14 @@ string zigzag() {
         bas.x  = deb.x + 10.0;  bas.y  = deb.y;
 
         //Calcul deltaE
-        deltaE = compute_deltaE(deb, haut);
+        deltaE = compute_deltaE(deb, haut) * 2;
         //Augmente E par deltaE
         E += deltaE;
 
         zigzag << "G1 X" << haut.x << " Y" << haut.y << " E" << E << " F" << F_G1 << "\n";
 
         //Calcul deltaE
-        deltaE = compute_deltaE(haut, bas);
+        deltaE = compute_deltaE(haut, bas) * 2;
         //Augmente E par deltaE
         E += deltaE;
 
@@ -110,132 +116,149 @@ string zigzag() {
 
 
 /**
- * Fonction qui permet de faire un set de lignes d'un point de début
- * à un point de fin avec l'angle donné
+ * Méthode qui permet de faire rotater un ensemble de points autour d'un point central
+ * selon l'angle donné.
+ * points : points à faire rotater
+ * center : centre de rotation
+ * angle : angle de rotation
  */
-string set_of_lines(Point start, Point end, double angle, double L, double &E) {
-    //Set de lignes
-    ostringstream set_of_lines;
+vector<Point> rotation_points(vector<Point> points, Point center, int angle) {
 
-    //Point courant
-    Point curr;
-    //Point courant initialisé au point de start
-    curr.x = start.x; curr.y = start.y;
+    //Ensemble des points rotatés
+    vector<Point> points_rotates;
 
-    //Spacing total initial
-    double spacing_total = spacing;
+    //Pour chaque point de l'ensemble de point
+    for (Point p : points) {
+        //Nouveau point rotate
+        Point point_rotate;
+        //Calcul de la distance au point central
+        double xM = p.x - center.x;
+        double yM = p.y - center.y;
 
-    cout << "Debut : " << start.x << " - " << start.y << endl;
-    cout << "Fin : " << end.x << " - " << end.y << endl;
+        //Si l'angle est positif, rotation vers la droite
+        if (angle > 0) {
+            //Le x rotaté est égal au x du centre + xM * cos(angle) - yM * sin(angle)
+            point_rotate.x = round(center.x + xM * cos(abs(angle) * M_PI / 180) - yM * sin(abs(angle) * M_PI / 180));
+            //Le y rotaté est égal au y du centre + xM * sin(angle) + yM * cos(angle)
+            point_rotate.y = round(center.y + xM * sin(abs(angle) * M_PI / 180) + yM * cos(abs(angle) * M_PI / 180));
 
-    //Tant qu'on le spacing totale ne dépasse pas la largeur du carré
-    while (spacing_total <= L - spacing) {
-        //Points du segment courant
-        Point p1, p2;
-
-        //Si l'angle est positif, on va du point en haut à gauche au point en bas à droite
-        if (angle > 0) {       
-            //Coordonnées du point courant
-            curr.x = curr.x + spacing;
-            curr.y = curr.y - spacing;
-
-            //Distance calculée
-            double dist, dx, dy, d;
-
-            //Première moitié
-            if (spacing_total <= L/2) {
-                //Calcul par rapport au début
-                dx = abs(curr.x - start.x);
-                dy = abs(curr.y - start.y);
-            //Deuxième moitié
-            } else {
-                //Calcul par rapport à la fin
-                dx = abs(curr.x - end.x);
-                dy = abs(curr.y - end.y);
-            }
-
-            //Calcul de la distance aux points p1 et p2
-            dist = sqrt(dx * dx + dy * dy);
-            d = dist * sin(45 * M_PI / 180) * 2;
-
-            //Première moitié : moitié supérieure gauche
-            if (spacing_total <= L/2) {
-                //Calcul des coordoonées des points p1 et p2
-                p1.x = start.x;         p1.y = start.y - d;
-                p2.x = start.x + d;     p2.y = start.y;
-            //Deuxième moitié : moitié inférieure droite
-            } else {
-                //Calcul des coordoonées des points p1 et p2
-                p1.x = end.x - d;       p1.y = end.y;
-                p2.x = end.x;           p2.y = end.y + d;
-            }
-
-        //Si l'angle est négatif, on va du point en bas à gauche au point en haut à droite 
-        } else if (angle < 0){
-            curr.x = curr.x + spacing;
-            curr.y = curr.y + spacing;
-
-            //Distance calculée
-            double dist, dx, dy, d;
-
-            //Première moitié
-            if (spacing_total <= L/2) {
-                //Calcul par rapport au début
-                dx = abs(curr.x - start.x);
-                dy = abs(curr.y - start.y);
-            //Deuxième moitié
-            } else {
-                //Calcul par rapport à la fin
-                dx = abs(curr.x - end.x);
-                dy = abs(curr.y - end.y);
-            }
-
-            //Calcul de la distance aux points p1 et p2
-            dist = sqrt(dx * dx + dy * dy);
-            d = dist * sin(45 * M_PI / 180) * 2;
-
-            //Première moitié : moitié supérieure gauche
-            if (spacing_total <= L/2) {
-                //Calcul des coordoonées des points p1 et p2
-                p1.x = start.x;         p1.y = start.y + d;
-                p2.x = start.x + d;     p2.y = start.y;
-            //Deuxième moitié : moitié inférieure droite
-            } else {
-                //Calcul des coordoonées des points p1 et p2
-                p1.x = end.x - d;       p1.y = end.y;
-                p2.x = end.x;           p2.y = end.y - d;
-            }
-        
-        //Si l'angle est nul
+        //Si l'angle est négatif, rotation vers la gauche (rotation inverse)
         } else {
-            curr.x = curr.x;
-            curr.y = curr.y - spacing;
-
-            //Calcul des coordonnées des points p1 et p2
-            p1.x = curr.x;         p1.y = curr.y;
-            p2.x = curr.x + L;     p2.y = curr.y;
+            //Le x rotaté est égal au x du centre + xM * cos(angle) + yM * sin(angle)
+            point_rotate.x = round(center.x + xM * cos(abs(angle) * M_PI / 180) + yM * sin(abs(angle) * M_PI / 180));
+            //Le y rotaté est égal au y du centre - xM * sin(angle) + yM * cos(angle)
+            point_rotate.y = round(center.y - xM * sin(abs(angle) * M_PI / 180) + yM * cos(abs(angle) * M_PI / 180));
         }
 
-        //Augmentation du spacing total
-        spacing_total += spacing;
-
-        //Calcul de deltaE pour les côtés du carré
-        double deltaE = compute_deltaE(p1, p2);
-        //Augmente E par deltaE
-        E += deltaE;
-
-        cout << "Courant : " << curr.x << " - " << curr.y << endl;
-        cout << "P1 : " << p1.x << " - " << p1.y << endl;
-        cout << "P2 : " << p2.x << " - " << p2.y << endl << endl;
-
-        //Déplacement G0 au point P1
-        set_of_lines << "G0 X" << p1.x << " Y" << p1.y << " F" << F_G0 << ";" << "\n";
-        //Déplacement G1 au point P2
-        set_of_lines << "G1 X" << p2.x << " Y" << p2.y << " E" << E << " F" << F_G1 << "\n";
+        //Ajoute le point rotaté à la
+        points_rotates.push_back(point_rotate);
     }
-    set_of_lines << "\n";
 
-    return set_of_lines.str();
+    //Retourne les points rotatés
+    return points_rotates;
+}
+
+
+/**
+ * Fonction qui permet de faire le découpage en ligne du bas vers le haut d'une forme.
+ * Retourne l'ensemble des points (2 à 2) pour faire le découpage
+ * points : points de la forme
+ * space : espacement entre les lignes
+ */
+vector<Point> hatching(vector<Point> points, double space)
+{
+
+    //Point constituant les lignes calculées
+    vector<Point> lignes;
+
+    //Déterminer ymin, ymax des points
+    double ymin =   numeric_limits<double>::max();
+    double ymax = - numeric_limits<double>::max();
+    for (Point p : points) {
+        ymin = min(ymin, p.x);
+        ymax = max(ymax, p.y);
+    }
+
+    //Déterminer hmin et hmax : ligne minimal et ligne maximal
+    double hmin = floor(ymin / nw) + 1; //Numéro de la première ligne
+    double hmax = floor(ymax / nw); //Numéro de la dernière ligne
+
+    //Nombre de lignes
+    int H = hmax - hmin + 1; //Max - min + 1
+
+    //Intersections
+    vector<vector<double>> H_intersects;
+    //Il y aura un nombre d'intersections au nombre de lignes H (avec 2 points par ligne)
+    H_intersects.resize(H);
+
+    //Pour chaque point
+    for (int i = 0; i < points.size(); i++) {
+        //Récupération du point i et du point n (point i + 1)
+        int n = (i+1) % points.size();
+        Point pi = points[i];
+        Point pn = points[n];
+
+        //Coordoonées des points i et n
+        double x_i = pi.x;      
+        double y_i = pi.y;
+        double x_n = pn.x;
+        double y_n = pn.y;
+
+        //Si le point i est au dessus du point n, les swape : on les veut le plus petit possible
+        if (y_i > y_n) { 
+            swap(y_i, y_n); //Y_n > Y_i
+            swap(x_i, x_n); //X_n > X_i
+        }
+
+        //Détermination du numéro du segment minimum et maximum
+        double seg_hmin = floor(y_i / nw) + 1;
+        double seg_hmax = floor(y_n / nw);
+
+        //Pour chaque segmente entre les 2 points
+        for (int h = seg_hmin; h <= seg_hmax; h++){
+            //Augmente le y de la taille de la buse
+            double y_h = h * nw; //Y du point courant
+
+            //Calcul du x de l'intersection
+            double x_intersection = x_i + (x_n - x_i) * (y_h - y_i) / (y_n - y_i);
+
+            //Ajout du point d'intersection à la ligne correspondante
+            H_intersects[h - hmin].push_back(x_intersection);
+        }
+    }
+
+    //Pour chaque ligne
+    for (int h = 0; h < H_intersects.size(); h = h + 10) {
+        //Trie les points du point gauche au point droit
+        sort(H_intersects[h].begin(), H_intersects[h].end());
+
+        //Calcule le segment de sortie
+        double y = ymin + (h * nw); //Calcul du y : ymin + hauteur courant
+
+        //Pour les points de la ligne d'intersection
+        for (int p=0; p<H_intersects[h].size(); p+=2) {
+            //Prendre le point p1 et p2
+            Point p1, p2;
+            //Récupération des coordonnées du point 1
+            double x0 = H_intersects[h][p];
+            //Récupération des coordonnées du point 2
+            double x1 = H_intersects[h][p+1];
+
+            //Coordonnées du point 1
+            p1.x = x0;
+            p1.y = y;
+            //Coordonnées du point 2
+            p2.x = x1;
+            p2.y = y; 
+
+            //Ajoute les 2 points aux lignes
+            lignes.push_back(p1);
+            lignes.push_back(p2);
+        }
+    }
+
+    //Retourne le découpage en lignes
+    return lignes;
 }
 
 
@@ -250,13 +273,13 @@ int main () {
     params.open("params.gcode", ios::in | ios::binary);
     if (!params) {
         cerr << "Impossible d'ouvrir le fichier params.gcode" << endl;
-        return 0;
+        exit(-1);
     }
 
-    gcode_file.open(file_name.c_str(), ios::out | ios::binary);
+    gcode_file.open(file_name, ios::out | ios::binary);
     if (!gcode_file) {
         cerr << "Impossible d'ouvrir le fichier " << file_name << endl;
-        return 0;
+        exit(-1);
     }
     gcode_file << params.rdbuf();
 
@@ -267,11 +290,15 @@ int main () {
     //Début du code pour générer un carré
 
     //Hauteur du cube
-    double height = 5;
+    double height = 1;
     //Nombre de couches
     int nb_layers = height/tau;
     //Largeur côté carré
-    double L = 40;
+    double L = 32;
+    //Coordonnées du centre
+    Point center;
+    center.x = X_center;
+    center.y = Y_center;
     //Coordonnées de départ
     Point start;
     start.x = X_center - L/2;
@@ -296,6 +323,28 @@ int main () {
     points.push_back(p4);
     points.push_back(p1);
 
+    //Calcul des points pour les lignes à 0°
+    vector<Point> rows_angle_0 = hatching(points, spacing);
+
+    //Rotation des points de 45°
+    vector<Point> points_angle_45 = rotation_points(points, center, 45);
+    //Calcul des points pour les lignes à 45°
+    vector<Point> rows_rotates_angle_45 = hatching(points_angle_45, spacing);
+    //Rotation des points des lignes à 45° de -45° (pour retourner dans l'état initial)
+    vector<Point> rows_angle_45 = rotation_points(rows_rotates_angle_45, center, -45);
+
+    //Rotation des points de -45°
+    vector<Point> points_angle_n_45 = rotation_points(points, center, -45);
+    //Calcul des points pour les lignes à -45°
+    vector<Point> rows_rotates_angle_n_45 = hatching(points_angle_n_45, spacing);
+    //Rotation des points des lignes à -45° de 45° (pour retourner dans l'état initial)
+    vector<Point> rows_angle_n_45 = rotation_points(rows_rotates_angle_n_45, center, 45);
+
+    //Combinaison des lignes à tracer
+    vector<Point> rows;
+    rows.insert(rows.end(), rows_angle_0.begin(), rows_angle_0.end());
+    rows.insert(rows.end(), rows_angle_45.begin(), rows_angle_45.end());
+    rows.insert(rows.end(), rows_angle_n_45.begin(), rows_angle_n_45.end());
     
     //Initialisation deltaE et E
     double deltaE, E = 0;
@@ -307,7 +356,7 @@ int main () {
         deltaE = compute_deltaE(p1, p2);
 
         //Déplacement au premier point
-        gcode_file << "G0 X" << p1.x << " Y" << p1.y << " Z" << Z << " F" << F_G0 << ";" << "\n\n"; 
+        gcode_file << "G0 X" << p1.x << " Y" << p1.y << " Z" << Z << " F" << F_G0 << ";" << "\n\n";
 
         //Pour chaque point du carré
         for (int i = 0; i < points.size(); i++) {
@@ -317,14 +366,41 @@ int main () {
             //Déplacement G1 à ce point
             gcode_file << "G1 X" << p.x << " Y" << p.y << " E" << E << " F" << F_G1 << "\n";
         }
-        gcode_file << "\n";
 
-        //Premier set avec un angle de 45°
-        gcode_file << set_of_lines(p4, p2, 45, L, E);
-        //Deuxième set avec un angle de -45°
-        gcode_file << set_of_lines(p1, p3, -45, L, E);
-        //Troisième set avec un angle de 0°
-        gcode_file << set_of_lines(p4, p1, 0, L, E);
+        //Booléen pour inverse le sens et gagner du temps
+        bool left_to_right = true;
+
+        //Pour chaque 2 points des lignes d'intersection
+        for (int i=0; i < rows.size(); i = i + 2){
+            Point p1, p2;
+
+            //Si on va de gauche à droite
+            if (left_to_right) {
+                //Récupération du premier point de la ligne d'intersection
+                p1 = rows[i];
+                //Récupération du deuxième point de la ligne d'intersection
+                p2 = rows[i + 1];
+
+            } else {
+                //Récupération du premier point de la ligne d'intersection
+                p1 = rows[i + 1];
+                //Récupération du deuxième point de la ligne d'intersection
+                p2 = rows[i];
+            }
+
+            //Calcul de deltaE pour la ligne d'intersection
+            deltaE = compute_deltaE(p1, p2);
+            //Augmente E par deltaE
+            E += deltaE;
+
+            //Déplacement G0 au premier point
+            gcode_file << "G0 X" << p1.x << " Y" << p1.y << '\n';
+            //Déplacement G1 au deuxième point
+            gcode_file << "G1 X" << p2.x << " Y" << p2.y << " E" << E << '\n';
+
+            //Change le sens
+            left_to_right = !left_to_right;
+        }
 
         //Passage à la couche suivante
         Z += tau;
