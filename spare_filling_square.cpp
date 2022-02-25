@@ -138,16 +138,16 @@ vector<Point> rotation_points(vector<Point> points, Point center, int angle) {
         //Si l'angle est positif, rotation vers la droite
         if (angle > 0) {
             //Le x rotaté est égal au x du centre + xM * cos(angle) - yM * sin(angle)
-            point_rotate.x = round(center.x + xM * cos(abs(angle) * M_PI / 180) - yM * sin(abs(angle) * M_PI / 180));
+            point_rotate.x = center.x + xM * cos(abs(angle) * M_PI / 180) - yM * sin(abs(angle) * M_PI / 180);
             //Le y rotaté est égal au y du centre + xM * sin(angle) + yM * cos(angle)
-            point_rotate.y = round(center.y + xM * sin(abs(angle) * M_PI / 180) + yM * cos(abs(angle) * M_PI / 180));
+            point_rotate.y = center.y + xM * sin(abs(angle) * M_PI / 180) + yM * cos(abs(angle) * M_PI / 180);
 
         //Si l'angle est négatif, rotation vers la gauche (rotation inverse)
         } else {
             //Le x rotaté est égal au x du centre + xM * cos(angle) + yM * sin(angle)
-            point_rotate.x = round(center.x + xM * cos(abs(angle) * M_PI / 180) + yM * sin(abs(angle) * M_PI / 180));
+            point_rotate.x = center.x + xM * cos(abs(angle) * M_PI / 180) + yM * sin(abs(angle) * M_PI / 180);
             //Le y rotaté est égal au y du centre - xM * sin(angle) + yM * cos(angle)
-            point_rotate.y = round(center.y - xM * sin(abs(angle) * M_PI / 180) + yM * cos(abs(angle) * M_PI / 180));
+            point_rotate.y = center.y - xM * sin(abs(angle) * M_PI / 180) + yM * cos(abs(angle) * M_PI / 180);
         }
 
         //Ajoute le point rotaté à la
@@ -228,7 +228,7 @@ vector<Point> hatching(vector<Point> points, double space)
     }
 
     //Pour chaque ligne
-    for (int h = 0; h < H_intersects.size(); h = h + 10) {
+    for (int h = 0; h < H_intersects.size(); h = h + (space / nw)) {
         //Trie les points du point gauche au point droit
         sort(H_intersects[h].begin(), H_intersects[h].end());
 
@@ -290,11 +290,11 @@ int main () {
     //Début du code pour générer un carré
 
     //Hauteur du cube
-    double height = 1;
+    double height = 0.6;
     //Nombre de couches
     int nb_layers = height/tau;
     //Largeur côté carré
-    double L = 32;
+    double L = 36;
     //Coordonnées du centre
     Point center;
     center.x = X_center;
