@@ -9,7 +9,8 @@ using namespace std;
 //Nom du fichier à généré
 string file_name = "hexagon.gcode";
 
-//Paramètres
+//===================Paramètres de l'impression===================
+
 //Diamètre de la buse
 double nw = 0.4;
 //Epaisseur d'une couche
@@ -20,10 +21,21 @@ double d = 1.75;
 int F_G0 = 3000;
 //Vitesse de déplacement G1
 int F_G1 = 1200;
+
+//===================Paramètres de la forme (à modifier pour changer l'hexagone)===================
+
 //X du centre
 double X_center = 100.0;
 //Y du centre
-double Y_center = 100.0;
+double Y_center = 100.0;    
+//Hauteur de l'hexagone (en mm)
+double height = 10;
+//Nombre de couches
+int nb_layers = height/tau;
+//Rayon du cercle circonscrit R (en mm)
+double R = 10;
+
+//=============================================================
 
 //Structure qui représente un point
 struct Point {
@@ -136,16 +148,12 @@ int main () {
 
     //Début du code pour générer un hexagone
 
-    //Hauteur de l'hexagone
-    double height = 15;
-    //Nombre de couches
-    int nb_layers = height/tau;
-    //Rayon du cercle circonscrit R
-    double R = 10;
     //Hauteur de départ
     double Z = tau;  
-    //Point qui sert de centre pour l'impression
+    //Coordonnées du centre
     Point center;
+    center.x = X_center;
+    center.y = Y_center;
 
     //Calcul du rayon du cercle inscrit r
     double r = cos(30 * M_PI / 180) * R;
@@ -158,12 +166,12 @@ int main () {
     Point p1, p2, p3, p4, p5, p6;
 
     //Calcul des points de l'hexagone
-    p1.x = X_center;        p1.y = Y_center + R;
-    p2.x = X_center + r;    p2.y = Y_center + h;
-    p3.x = X_center + r;    p3.y = Y_center - h;
-    p4.x = X_center;        p4.y = Y_center - R;
-    p5.x = X_center - r;    p5.y = Y_center - h;
-    p6.x = X_center - r;    p6.y = Y_center + h;
+    p1.x = center.x;        p1.y = center.y + R;
+    p2.x = center.x + r;    p2.y = center.y + h;
+    p3.x = center.x + r;    p3.y = center.y - h;
+    p4.x = center.x;        p4.y = center.y - R;
+    p5.x = center.x - r;    p5.y = center.y - h;
+    p6.x = center.x - r;    p6.y = center.y + h;
 
     //Ajout des points à la liste des points (p1 à la fin pour retourner dessus)
     points.push_back(p2);

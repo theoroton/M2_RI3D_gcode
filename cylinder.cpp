@@ -9,7 +9,8 @@ using namespace std;
 //Nom du fichier à généré
 string file_name = "cylinder.gcode";
 
-//Paramètres
+//===================Paramètres de l'impression===================
+
 //Diamètre de la buse
 double nw = 0.4;
 //Epaisseur d'une couche
@@ -20,10 +21,25 @@ double d = 1.75;
 int F_G0 = 3000;
 //Vitesse de déplacement G1
 int F_G1 = 1200;
+
+//===================Paramètres de la forme (à modifier pour changer le cylindre)===================
+
 //X du centre
 double X_center = 100.0;
 //Y du centre
-double Y_center = 100.0;
+double Y_center = 100.0;    
+//Hauteur du cylindre (en mm)
+double height = 5;
+//Nombre de couches
+int nb_layers = height/tau;
+//Diamètre du cylindre (en mm)
+double D = 20;
+
+//=============================================================
+
+
+
+
 
 //Structure qui représente un point
 struct Point {
@@ -138,15 +154,10 @@ int main () {
 
     //Début du code pour générer un cylindre
 
-    //Centre du cercle du cylindre
-    center.x = 100.0;
-    center.y = 100.0;
-    //Hauteur du cylindre
-    double height = 5;
-    //Nombre de couches
-    int nb_layers = height/tau;
-    //Diamètre du cylindre
-    double D = 20;
+    //Coordonnées du centre
+    Point center;
+    center.x = X_center;
+    center.y = Y_center;
     //Rayon du cylindre
     double r = D/2;
     //Hauteur de départ

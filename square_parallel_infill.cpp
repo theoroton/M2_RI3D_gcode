@@ -9,7 +9,8 @@ using namespace std;
 //Nom du fichier à généré
 string file_name = "square_parallel_infill.gcode";
 
-//Paramètres
+//===================Paramètres de l'impression===================
+
 //Diamètre de la buse
 double nw = 0.4;
 //Epaisseur d'une couche
@@ -20,10 +21,23 @@ double d = 1.75;
 int F_G0 = 3000;
 //Vitesse de déplacement G1
 int F_G1 = 1200;
+
+//===================Paramètres de la forme (à modifier pour changer le carré)===================
+
 //X du centre
 double X_center = 100.0;
 //Y du centre
 double Y_center = 100.0;
+//Spacing donné (en mm)
+double spacing = 4;
+//Hauteur du cube (en mm)
+double height = 1;
+//Nombre de couches (par défaut taille/tau)
+int nb_layers = height/tau;
+//Largeur côté carré (en mm)
+double L = 36;
+
+//=============================================================
 
 //Structure qui représente un point
 struct Point {
@@ -134,16 +148,14 @@ int main () {
 
     //Début du code pour générer un carré
 
-    //Hauteur du cube
-    double height = 5;
-    //Nombre de couches
-    int nb_layers = height/tau;
-    //Largeur côté carré
-    double L = 40;
+    //Coordonnées du centre
+    Point center;
+    center.x = X_center;
+    center.y = Y_center;
     //Coordonnées de départ
     Point start;
-    start.x = X_center - L/2;
-    start.y = Y_center - L/2;
+    start.x = center.x - L/2;
+    start.y = center.y - L/2;
     //Hauteur de départ
     double Z = tau;
 
