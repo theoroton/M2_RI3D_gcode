@@ -128,7 +128,10 @@ vector<Point> rotation_points(vector<Point> points, Point center, int angle) {
     vector<Point> points_rotates;
 
     //Pour chaque point de l'ensemble de point
-    for (Point p : points) {
+    for (int i = 0; i < points.size(); i++) {
+        //Point p
+        Point p = points[i];
+
         //Nouveau point rotate
         Point point_rotate;
         //Calcul de la distance au point central
@@ -262,6 +265,60 @@ vector<Point> hatching(vector<Point> points, double space)
 }
 
 
+/**
+ * Méthode qui permet de voir si les points sont bien contenus dans le carré
+ * Si un point est en dehors du carré, on le modifie pour qu'il soit dedans
+ */
+vector<Point> check_points_in_square(vector<Point> square_points, vector<Point> points) {
+
+    //Points dans le carré
+    vector<Point> points_in_square;
+
+    //Calcul du xmin, xmax, ymin et ymax
+    double xmin =   numeric_limits<double>::max();
+    double xmax = - numeric_limits<double>::max();
+    double ymin =   numeric_limits<double>::max();
+    double ymax = - numeric_limits<double>::max();
+
+    //Pour chaque point du carré
+    for (int i = 0; i < square_points.size(); i++) {
+        //Point p
+        Point p = square_points[i];
+
+        //Si le x du point p est inférieur au xmin
+        if (p.x < xmin) { xmin = p.x; }
+        //Si le x du point p est supérieur au xmax
+        if (p.x > xmax) { xmax = p.x; }
+        //Si le y du point p est inférieur au ymin
+        if (p.y < ymin) { ymin = p.y; }
+        //Si le y du point p est supérieur au ymax
+        if (p.y < ymax) { ymax = p.y; }
+
+    }
+
+    //Pour chaque points données
+    for (int i = 0; i < points.size(); i++) {
+        //Point p
+        Point p = points[i];
+
+        //Si le x du point p est inférieur au xmin
+        if (p.x < xmin) { p.x = xmin; }
+        //Si le x du point p est supérieur au xmax
+        if (p.x > xmax) { p.x = xmax; }
+        //Si le y du point p est inférieur au ymin
+        if (p.y < ymin) { p.y = ymin; }
+        //Si le y du point p est supérieur au ymax
+        if (p.y < ymax) { p.y = ymax; }
+    
+        //Ajout du point aux points dans le carré
+        points_in_square.push_back(p);
+    }
+
+    //Retourne les points dans le carré
+    return points_in_square;
+}
+
+
 //Main
 int main () {
     //Fichier des paramètres
@@ -345,6 +402,9 @@ int main () {
     rows.insert(rows.end(), rows_angle_0.begin(), rows_angle_0.end());
     rows.insert(rows.end(), rows_angle_45.begin(), rows_angle_45.end());
     rows.insert(rows.end(), rows_angle_n_45.begin(), rows_angle_n_45.end());
+
+    //Vérification si les point sont bien dans le carré
+    rows = check_points_in_square(points, rows);
     
     //Initialisation deltaE et E
     double deltaE, E = 0;
